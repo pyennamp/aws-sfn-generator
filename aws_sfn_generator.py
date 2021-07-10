@@ -1,7 +1,6 @@
+from logger import log
 import pandas as pd
 import sys
-
-from logger import log
 
 
 def replace_job_holders(data: str, job_name: str):
