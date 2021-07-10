@@ -1,4 +1,4 @@
-from logger import log
+from utils.logger import log
 from aws_sfn_generator import generate_multi_step_workflow
 
 file = "./input/metadata.xlsx"

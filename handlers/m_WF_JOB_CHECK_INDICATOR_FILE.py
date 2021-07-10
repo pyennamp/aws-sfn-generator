@@ -1,7 +1,6 @@
+from utils.logger import log
 import boto3
 import sys
-
-from logger import log
 
 
 def split_s3_path(s3_path):
