@@ -1,5 +1,5 @@
 from logger import log
-from step_function_builder import generate_multi_step_workflow
+from aws_sfn_generator import generate_multi_step_workflow
 
 file = "./input/metadata.xlsx"
 region = "us-west-1"
