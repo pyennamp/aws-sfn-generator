@@ -1,0 +1,107 @@
+{
+  "Comment": "ETL Job wf_DIM_PRODUCT",
+  "StartAt": "m_DIM_PRODUCT",
+  "States": {
+    "m_DIM_PRODUCT": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "m_DIM_PRODUCT"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "m_DIM_PRODUCT_Err"
+        }
+      ],
+      "Next": "m_DIM_PRODUCT_DEL_PROCESS"
+    },
+    "m_DIM_PRODUCT_DEL_PROCESS": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "m_DIM_PRODUCT_DEL_PROCESS"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "m_DIM_PRODUCT_DEL_PROCESS_Err"
+        }
+      ],
+      "Next": "Create_job_indicator_file"
+    },
+    "Create_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-1:1234567890:function:m_WF_JOB_CREATE_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "wf_dim_product.ind",
+        "ind_file_path": "s3://workflow/indicators/"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "Create_job_indicator_file_Err"
+        }
+      ],
+      "End": true
+    },
+    "Create_job_indicator_file_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job wf_DIM_PRODUCT_Create_job_indicator_file Failed",
+        "Message": "ETL Job wf_DIM_PRODUCT_Create_job_indicator_file got failed"
+      },
+      "Next": "wait_until"
+    },
+    "m_DIM_PRODUCT_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job m_DIM_PRODUCT Failed",
+        "Message": "ETL Job m_DIM_PRODUCT got failed"
+      },
+      "Next": "wait_until"
+    },
+    "m_DIM_PRODUCT_DEL_PROCESS_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job m_DIM_PRODUCT_DEL_PROCESS Failed",
+        "Message": "ETL Job m_DIM_PRODUCT_DEL_PROCESS got failed"
+      },
+      "Next": "wait_until"
+    },
+    "wait_until": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Check_job_indicator_file"
+    },
+    "Check_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-1:1234567890:function:m_WF_JOB_CHECK_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "wf_dim_product.ind",
+        "ind_file_path": "s3://workflow/indicators/"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "wait_until"
+        }
+      ],
+      "End": true
+    }
+  }
+}

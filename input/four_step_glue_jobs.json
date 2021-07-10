@@ -1,0 +1,159 @@
+{
+  "Comment": "ETL Job $$WF_NAME",
+  "StartAt": "$$JOB_NAME_1",
+  "States": {
+    "$$JOB_NAME_1": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "$$JOB_NAME_1"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "$$JOB_NAME_1_Err"
+        }
+      ],
+      "Next": "$$JOB_NAME_2"
+    },
+    "$$JOB_NAME_2": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "$$JOB_NAME_2"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "$$JOB_NAME_2_Err"
+        }
+      ],
+      "Next": "$$JOB_NAME_3"
+    },
+    "$$JOB_NAME_3": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "$$JOB_NAME_3"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "$$JOB_NAME_3_Err"
+        }
+      ],
+      "Next": "$$JOB_NAME_4"
+    },
+    "$$JOB_NAME_4": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "$$JOB_NAME_4"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "$$JOB_NAME_4_Err"
+        }
+      ],
+      "Next": "Create_job_indicator_file"
+    },
+    "Create_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:$$REGION:$$ACCOUNT_NUMBER:function:m_WF_JOB_CREATE_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "$$FILE_IND",
+        "ind_file_path": "$$IND_FILE_PATH"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "Create_job_indicator_file_Err"
+        }
+      ],
+      "End": true
+    },
+    "Create_job_indicator_file_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:$$REGION:$$ACCOUNT_NUMBER:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job $$WF_NAME_Create_job_indicator_file Failed",
+        "Message": "ETL Job $$WF_NAME_Create_job_indicator_file got failed"
+      },
+      "Next": "wait_until"
+    },
+    "$$JOB_NAME_1_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:$$REGION:$$ACCOUNT_NUMBER:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job $$JOB_NAME_1 Failed",
+        "Message": "ETL Job $$JOB_NAME_1 got failed"
+      },
+      "Next": "wait_until"
+    },
+    "$$JOB_NAME_2_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:$$REGION:$$ACCOUNT_NUMBER:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job $$JOB_NAME_2 Failed",
+        "Message": "ETL Job $$JOB_NAME_2 got failed"
+      },
+      "Next": "wait_until"
+    },
+    "$$JOB_NAME_3_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:$$REGION:$$ACCOUNT_NUMBER:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job $$JOB_NAME_3 Failed",
+        "Message": "ETL Job $$JOB_NAME_3 got failed"
+      },
+      "Next": "wait_until"
+    },
+    "$$JOB_NAME_4_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:$$REGION:$$ACCOUNT_NUMBER:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job $$JOB_NAME_4 Failed",
+        "Message": "ETL Job $$JOB_NAME_4 got failed"
+      },
+      "Next": "wait_until"
+    },
+    "wait_until": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Check_job_indicator_file"
+    },
+    "Check_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:$$REGION:$$ACCOUNT_NUMBER:function:m_WF_JOB_CHECK_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "$$FILE_IND",
+        "ind_file_path": "$$IND_FILE_PATH"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "wait_until"
+        }
+      ],
+      "End": true
+    }
+  }
+}

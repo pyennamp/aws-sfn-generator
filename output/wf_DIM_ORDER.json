@@ -1,0 +1,159 @@
+{
+  "Comment": "ETL Job wf_DIM_ORDER",
+  "StartAt": "m_DIM_ORDER",
+  "States": {
+    "m_DIM_ORDER": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "m_DIM_ORDER"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "m_DIM_ORDER_Err"
+        }
+      ],
+      "Next": "m_DIM_ORDER_UPDATE_DTLS"
+    },
+    "m_DIM_ORDER_UPDATE_DTLS": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "m_DIM_ORDER_UPDATE_DTLS"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "m_DIM_ORDER_UPDATE_DTLS_Err"
+        }
+      ],
+      "Next": "m_DIM_ORDER_CANCEL"
+    },
+    "m_DIM_ORDER_CANCEL": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "m_DIM_ORDER_CANCEL"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "m_DIM_ORDER_CANCEL_Err"
+        }
+      ],
+      "Next": "m_DIM_ORDER_UPDATE_MODE"
+    },
+    "m_DIM_ORDER_UPDATE_MODE": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "m_DIM_ORDER_UPDATE_MODE"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "m_DIM_ORDER_UPDATE_MODE_Err"
+        }
+      ],
+      "Next": "Create_job_indicator_file"
+    },
+    "Create_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-1:1234567890:function:m_WF_JOB_CREATE_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "wf_dim_order.ind",
+        "ind_file_path": "s3://workflow/indicators/"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "Create_job_indicator_file_Err"
+        }
+      ],
+      "End": true
+    },
+    "Create_job_indicator_file_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job wf_DIM_ORDER_Create_job_indicator_file Failed",
+        "Message": "ETL Job wf_DIM_ORDER_Create_job_indicator_file got failed"
+      },
+      "Next": "wait_until"
+    },
+    "m_DIM_ORDER_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job m_DIM_ORDER Failed",
+        "Message": "ETL Job m_DIM_ORDER got failed"
+      },
+      "Next": "wait_until"
+    },
+    "m_DIM_ORDER_UPDATE_DTLS_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job m_DIM_ORDER_UPDATE_DTLS Failed",
+        "Message": "ETL Job m_DIM_ORDER_UPDATE_DTLS got failed"
+      },
+      "Next": "wait_until"
+    },
+    "m_DIM_ORDER_CANCEL_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job m_DIM_ORDER_CANCEL Failed",
+        "Message": "ETL Job m_DIM_ORDER_CANCEL got failed"
+      },
+      "Next": "wait_until"
+    },
+    "m_DIM_ORDER_UPDATE_MODE_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job m_DIM_ORDER_UPDATE_MODE Failed",
+        "Message": "ETL Job m_DIM_ORDER_UPDATE_MODE got failed"
+      },
+      "Next": "wait_until"
+    },
+    "wait_until": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Check_job_indicator_file"
+    },
+    "Check_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-1:1234567890:function:m_WF_JOB_CHECK_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "wf_dim_order.ind",
+        "ind_file_path": "s3://workflow/indicators/"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "wait_until"
+        }
+      ],
+      "End": true
+    }
+  }
+}

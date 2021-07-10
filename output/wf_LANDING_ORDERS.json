@@ -1,0 +1,81 @@
+{
+  "Comment": "ETL Job wf_LANDING_ORDERS",
+  "StartAt": "m_LANDING_ORDERS",
+  "States": {
+    "m_LANDING_ORDERS": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "m_LANDING_ORDERS"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "m_LANDING_ORDERS_Err"
+        }
+      ],
+      "Next": "Create_job_indicator_file"
+    },
+    "Create_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-1:1234567890:function:m_WF_JOB_CREATE_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "wf_landing_orders.ind",
+        "ind_file_path": "s3://workflow/indicators/"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "Create_job_indicator_file_Err"
+        }
+      ],
+      "End": true
+    },
+    "Create_job_indicator_file_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job wf_LANDING_ORDERS_Create_job_indicator_file Failed",
+        "Message": "ETL Job wf_LANDING_ORDERS_Create_job_indicator_file got failed"
+      },
+      "Next": "wait_until"
+    },
+    "m_LANDING_ORDERS_Err": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-west-1:1234567890:sf-workflow-notifications",
+        "Subject": "[ERROR]: ETL Job m_LANDING_ORDERS Failed",
+        "Message": "ETL Job m_LANDING_ORDERS got failed"
+      },
+      "Next": "wait_until"
+    },
+    "wait_until": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Check_job_indicator_file"
+    },
+    "Check_job_indicator_file": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-1:1234567890:function:m_WF_JOB_CHECK_INDICATOR_FILE",
+      "Parameters": {
+        "file_list": "wf_landing_orders.ind",
+        "ind_file_path": "s3://workflow/indicators/"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "Next": "wait_until"
+        }
+      ],
+      "End": true
+    }
+  }
+}
